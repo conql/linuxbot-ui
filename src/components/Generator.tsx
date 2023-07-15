@@ -3,14 +3,12 @@ import { useThrottleFn } from 'solidjs-use'
 import { generateSignature } from '@/utils/auth'
 import IconClear from './icons/Clear'
 import MessageItem from './MessageItem'
-import SystemRoleSettings from './SystemRoleSettings'
 import ErrorMessageItem from './ErrorMessageItem'
 import type { ChatMessage, ErrorMessage } from '@/types'
 
 export default () => {
   let inputRef: HTMLTextAreaElement
   const [currentSystemRoleSettings, setCurrentSystemRoleSettings] = createSignal('')
-  const [systemRoleEditing, setSystemRoleEditing] = createSignal(false)
   const [messageList, setMessageList] = createSignal<ChatMessage[]>([])
   const [currentError, setCurrentError] = createSignal<ErrorMessage>()
   const [currentAssistantMessage, setCurrentAssistantMessage] = createSignal('')
@@ -200,13 +198,6 @@ export default () => {
 
   return (
     <div my-6>
-      <SystemRoleSettings
-        canEdit={() => messageList().length === 0}
-        systemRoleEditing={systemRoleEditing}
-        setSystemRoleEditing={setSystemRoleEditing}
-        currentSystemRoleSettings={currentSystemRoleSettings}
-        setCurrentSystemRoleSettings={setCurrentSystemRoleSettings}
-      />
       <Index each={messageList()}>
         {(message, index) => (
           <MessageItem
@@ -233,10 +224,9 @@ export default () => {
           </div>
         }
       >
-        <div class="gen-text-wrapper" class:op-50={systemRoleEditing()}>
+        <div class="gen-text-wrapper">
           <textarea
             ref={inputRef!}
-            disabled={systemRoleEditing()}
             onKeyDown={handleKeydown}
             placeholder="请输入..."
             autocomplete="off"
@@ -248,10 +238,10 @@ export default () => {
             rows="1"
             class="gen-textarea"
           />
-          <button onClick={handleButtonClick} disabled={systemRoleEditing()} gen-slate-btn style={{ width: '120px' }}>
+          <button onClick={handleButtonClick} gen-slate-btn style={{ width: '120px' }}>
             发送
           </button>
-          <button title="清空" onClick={clear} disabled={systemRoleEditing()} gen-slate-btn>
+          <button title="清空" onClick={clear} gen-slate-btn>
             <IconClear />
           </button>
         </div>
