@@ -32,6 +32,7 @@ const { title } = Astro.props;
 <style is:global>
   :root {
     --c-bg: #fbfbfb;
+    --c-bg2: #f3f3f3;
     --c-fg: #444444;
     --c-scroll: #d9d9d9;
     --c-scroll-hover: #bbbbbb;
@@ -46,13 +47,14 @@ const { title } = Astro.props;
 
   html.dark {
     --c-bg: #212129;
+    --c-bg2: #2a2a32;
     --c-fg: #ddddf0;
     --c-scroll: #333333;
     --c-scroll-hover: #555555;
   }
 
   main {
-    max-width: 70ch;
+    max-width: 120ch;
     margin: 0 auto;
     padding: 6rem 2rem 4rem;
   }
@@ -71,6 +73,11 @@ const { title } = Astro.props;
   ::-webkit-scrollbar-track {
     background-color: var(--c-bg);
   }
+
+.message-div p {
+  padding: 0 !important;
+}
+
 </style>
 
 <script>

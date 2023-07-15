@@ -1,9 +1,10 @@
-import { createSignal } from 'solid-js'
+import { Index, createSignal } from 'solid-js'
 import MarkdownIt from 'markdown-it'
 import mdKatex from 'markdown-it-katex'
 import mdHighlight from 'markdown-it-highlightjs'
 import { useClipboard, useEventListener } from 'solidjs-use'
 import IconRefresh from './icons/Refresh'
+import Attachment from './Attachment'
 import type { Accessor } from 'solid-js'
 import type { ChatMessage } from '@/types'
 
@@ -14,7 +15,23 @@ interface Props {
   onRetry?: () => void
 }
 
-export default ({ role, message, showRetry, onRetry }: Props) => {
+function extractAttachList(inputString: string) {
+  const regex = /```attachment\n([\s\S]*?)\n```/g
+
+  const attachments = []
+  let cleanedString = inputString
+  let match = regex.exec(inputString)
+
+  while (match !== null) {
+    attachments.push(JSON.parse(match[1]))
+    cleanedString = cleanedString.replace(match[0], '')
+    match = regex.exec(inputString)
+  }
+
+  return { attachments, cleanedString }
+}
+
+export default ({ role, message: prop_message, showRetry, onRetry }: Props) => {
   const [source] = createSignal('')
   const { copy, copied } = useClipboard({ source, copiedDuring: 1000 })
 
@@ -33,7 +50,16 @@ export default ({ role, message, showRetry, onRetry }: Props) => {
     }
   })
 
-  const htmlString = () => {
+  let message = typeof prop_message === 'function' ? prop_message() : prop_message
+  const { attachments, cleanedString } = extractAttachList(message)
+  message = cleanedString
+
+  const beforeAttachList = attachments.filter(attach => attach.position === 'before')
+  const afterAttachList = attachments.filter(attach => attach.position === 'after')
+
+  console.log(beforeAttachList, afterAttachList)
+
+  function htmlString() {
     const md = MarkdownIt({
       linkify: true,
       breaks: true,
@@ -55,12 +81,7 @@ export default ({ role, message, showRetry, onRetry }: Props) => {
       </div>`
     }
 
-    if (typeof message === 'function')
-      return md.render(message())
-    else if (typeof message === 'string')
-      return md.render(message)
-
-    return ''
+    return md.render(message)
   }
 
   // const roleIconClass = {
@@ -91,20 +112,53 @@ export default ({ role, message, showRetry, onRetry }: Props) => {
   }
 
   return (
-    <div class={`py-2 -mx-4 px-4 transition-colors md:hover:bg-slate/3 ${role === 'user' ? 'fie' : ''}`}>
-      <div class="flex gap-3 rounded-lg">
-        {role === 'assistant' && roleIcon}
-        <div class="message prose break-words overflow-hidden" innerHTML={htmlString()} />
-        {role === 'user' && roleIcon}
-      </div>
-      {showRetry?.() && onRetry && (
+    <div class={role === 'user' ? 'flex-right' : 'flex-left'}>
+      <Index each={beforeAttachList}>
+        {attachment => (
+          <div class={role === 'user' ? 'message-user' : 'message-gpt'}>
+            <Attachment
+              title={attachment().title}
+              content={attachment().content}
+              type={attachment().type}
+              position={attachment().position}
+            />
+          </div>
+        )}
+      </Index>
+      <div
+        class={role === 'user' ? 'message-user' : 'message-gpt'}
+        style={{
+          'max-width': '70ch',
+        }}
+      >
+        <div class="flex gap-3 rounded-lg">
+          {/* {role === 'assistant' && roleIcon} */}
+          <div class="message prose break-words overflow-hidden -my-4" innerHTML={htmlString()} />
+          {/* {role === 'user' && roleIcon} */}
+        </div>
+
+        {showRetry?.() && onRetry && (
         <div class="fie px-3 mb-2">
           <div onClick={onRetry} class="gpt-retry-btn">
             <IconRefresh />
             <span>重新生成</span>
           </div>
         </div>
-      )}
+        )}
+
+      </div>
+      <Index each={afterAttachList}>
+        {attachment => (
+          <div class={role === 'user' ? 'message-user' : 'message-gpt'}>
+            <Attachment
+              title={attachment().title}
+              content={attachment().content}
+              type={attachment().type}
+              position={attachment().position}
+            />
+          </div>
+        )}
+      </Index>
     </div>
   )
 }
