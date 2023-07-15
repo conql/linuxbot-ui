@@ -226,19 +226,19 @@ export default () => {
       { currentError() && <ErrorMessageItem data={currentError()} onRetry={retryLastFetch} /> }
       <Show
         when={!loading()}
-        fallback={() => (
+        fallback={
           <div class="gen-cb-wrapper">
-            <span>AI is thinking...</span>
-            <div class="gen-cb-stop" onClick={stopStreamFetch}>Stop</div>
+            <span>AI 思考中...</span>
+            <div class="gen-cb-stop" onClick={stopStreamFetch}>停止</div>
           </div>
-        )}
+        }
       >
         <div class="gen-text-wrapper" class:op-50={systemRoleEditing()}>
           <textarea
             ref={inputRef!}
             disabled={systemRoleEditing()}
             onKeyDown={handleKeydown}
-            placeholder="Enter something..."
+            placeholder="请输入..."
             autocomplete="off"
             autofocus
             onInput={() => {
@@ -248,10 +248,10 @@ export default () => {
             rows="1"
             class="gen-textarea"
           />
-          <button onClick={handleButtonClick} disabled={systemRoleEditing()} gen-slate-btn>
-            Send
+          <button onClick={handleButtonClick} disabled={systemRoleEditing()} gen-slate-btn style={{ width: '120px' }}>
+            发送
           </button>
-          <button title="Clear" onClick={clear} disabled={systemRoleEditing()} gen-slate-btn>
+          <button title="清空" onClick={clear} disabled={systemRoleEditing()} gen-slate-btn>
             <IconClear />
           </button>
         </div>
