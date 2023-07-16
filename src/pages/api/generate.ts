@@ -1,5 +1,3 @@
-// #vercel-disable-blocks
-import { ProxyAgent, fetch } from 'undici'
 // #vercel-end
 import { generatePayload, parseOpenAIStream } from '@/utils/openAI'
 import { verifySignature } from '@/utils/auth'

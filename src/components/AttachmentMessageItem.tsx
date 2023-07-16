@@ -1,15 +1,7 @@
-// Attachment.tsx
-
 import { createSignal } from 'solid-js'
+import type { Attachment } from '@/types'
 
-interface AttachProps {
-  title: string
-  content: string
-  type: 'image' | 'file' | 'text'
-  position: 'before' | 'after'
-}
-
-export default ({ title, content, type, position }: AttachProps) => {
+export default ({ title, content, type }: Attachment) => {
   const [expand, setExpand] = createSignal(false)
 
   const handleExpand = () => {

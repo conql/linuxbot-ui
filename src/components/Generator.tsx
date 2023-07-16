@@ -1,10 +1,12 @@
 import { Index, Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js'
-import { useThrottleFn } from 'solidjs-use'
+import { rand, useThrottleFn } from 'solidjs-use'
 import { generateSignature } from '@/utils/auth'
 import IconClear from './icons/Clear'
+import IconUpload from './icons/Upload'
 import MessageItem from './MessageItem'
 import ErrorMessageItem from './ErrorMessageItem'
-import type { ChatMessage, ErrorMessage } from '@/types'
+import UploadItem from './UploadItem'
+import type { Attachment, ChatMessage, ErrorMessage } from '@/types'
 
 export default () => {
   let inputRef: HTMLTextAreaElement
@@ -15,6 +17,15 @@ export default () => {
   const [loading, setLoading] = createSignal(false)
   const [controller, setController] = createSignal<AbortController>(null)
   const [isStick, setStick] = createSignal(false)
+  const [uploads, setUploads] = createSignal<Attachment[]>([])
+
+  // create 50 uploads for testing
+  setUploads(Array.from({ length: 50 }, (_, i) => ({
+    title: i.toString(),
+    content: `test${i}.png`,
+    type: 'pdf',
+    progress: rand(0, 100),
+  })))
 
   createEffect(() => (isStick() && smoothToBottom()))
 
@@ -52,7 +63,7 @@ export default () => {
     isStick() ? localStorage.setItem('stickToBottom', 'stick') : localStorage.removeItem('stickToBottom')
   }
 
-  const handleButtonClick = async() => {
+  const sendBtnClick = async() => {
     const inputValue = inputRef.value
     if (!inputValue)
       return
@@ -162,7 +173,7 @@ export default () => {
     }
   }
 
-  const clear = () => {
+  const clearMessages = () => {
     inputRef.value = ''
     inputRef.style.height = 'auto'
     setMessageList([])
@@ -186,14 +197,39 @@ export default () => {
     }
   }
 
-  const handleKeydown = (e: KeyboardEvent) => {
+  const handleEnterKeyDown = (e: KeyboardEvent) => {
     if (e.isComposing || e.shiftKey)
       return
 
     if (e.keyCode === 13) {
       e.preventDefault()
-      handleButtonClick()
+      sendBtnClick()
     }
+  }
+
+  const uploadBtnClick = async() => {
+    // Create a new file input element
+    const fileInput = document.createElement('input')
+    fileInput.type = 'file'
+    fileInput.multiple = true
+
+    // Listen for the change event so we can get the selected file
+    fileInput.addEventListener('change', async(event) => {
+      // Get the selected file
+      const files = Array.from(((event.target) as any).files)
+      files.forEach((file) => {
+        // Read the file (optional)
+        const reader = new FileReader()
+        reader.onload = (event) => {
+          console.log(event.target.result)
+        }
+        reader.readAsDataURL(file)
+
+        setUploads([...uploads(), { title: file.name, content: '', type: file.type }])
+        console.log(uploads())
+      })
+    })
+    fileInput.click()
   }
 
   return (
@@ -225,9 +261,12 @@ export default () => {
         }
       >
         <div class="gen-text-wrapper">
+          <button title="上传附件" gen-slate-btn onClick={uploadBtnClick}>
+            <IconUpload />
+          </button>
           <textarea
             ref={inputRef!}
-            onKeyDown={handleKeydown}
+            onKeyDown={handleEnterKeyDown}
             placeholder="请输入..."
             autocomplete="off"
             autofocus
@@ -238,19 +277,52 @@ export default () => {
             rows="1"
             class="gen-textarea"
           />
-          <button onClick={handleButtonClick} gen-slate-btn style={{ width: '120px' }}>
+          <button onClick={sendBtnClick} gen-slate-btn>
             发送
           </button>
-          <button title="清空" onClick={clear} gen-slate-btn>
+          <button title="清空" onClick={clearMessages} gen-slate-btn>
             <IconClear />
           </button>
         </div>
+        <Show
+          when={typeof uploads === 'function' && uploads().length > 0}
+        >
+          <div class="flex-inline flex-wrap justify-start bg-(slate op-3) rounded-lg p-4 max-w-auto">
+            <Index each={uploads()}>
+              {(upload, index) => (
+                <UploadItem
+                  index={index}
+                  title={() => upload().title}
+                  content={() => upload().content}
+                  type={() => upload().type}
+                  progress={() => upload().progress}
+                  deleteFunc={(index) => {
+                    setUploads(uploads().filter((_, i) => i !== index))
+                  }}
+                />
+              )}
+            </Index>
+            <div class="flex-auto" />
+          </div>
+        </Show>
       </Show>
       <div class="fixed bottom-5 left-5 rounded-md hover:bg-slate/10 w-fit h-fit transition-colors active:scale-90" class:stick-btn-on={isStick()}>
         <div>
-          <button class="p-2.5 text-base" title="stick to bottom" type="button" onClick={() => setStick(!isStick())}>
-            <div i-ph-arrow-line-down-bold />
-          </button>
+          <div class="p-2.5 text-base" title="黏附底端" onClick={() => setStick(!isStick())}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="1em"
+              height="1em"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lucide lucide-list-end"
+            ><path d="M16 12H3" /><path d="M16 6H3" /><path d="M10 18H3" /><path d="M21 6v10a2 2 0 0 1-2 2h-5" /><path d="m16 16-2 2 2 2" />
+            </svg>
+          </div>
         </div>
       </div>
     </div>

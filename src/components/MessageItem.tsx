@@ -4,7 +4,7 @@ import mdKatex from 'markdown-it-katex'
 import mdHighlight from 'markdown-it-highlightjs'
 import { useClipboard, useEventListener } from 'solidjs-use'
 import IconRefresh from './icons/Refresh'
-import Attachment from './Attachment'
+import AttachmentMessageItem from './AttachmentMessageItem'
 import type { Accessor } from 'solid-js'
 import type { ChatMessage } from '@/types'
 
@@ -13,22 +13,6 @@ interface Props {
   message: Accessor<string> | string
   showRetry?: Accessor<boolean>
   onRetry?: () => void
-}
-
-function extractAttachList(inputString: string) {
-  const regex = /```attachment\n([\s\S]*?)\n```/g
-
-  const attachments = []
-  let cleanedString = inputString
-  let match = regex.exec(inputString)
-
-  while (match !== null) {
-    attachments.push(JSON.parse(match[1]))
-    cleanedString = cleanedString.replace(match[0], '')
-    match = regex.exec(inputString)
-  }
-
-  return { attachments, cleanedString }
 }
 
 export default ({ role, message: prop_message, showRetry, onRetry }: Props) => {
@@ -50,14 +34,22 @@ export default ({ role, message: prop_message, showRetry, onRetry }: Props) => {
     }
   })
 
-  let message = typeof prop_message === 'function' ? prop_message() : prop_message
-  const { attachments, cleanedString } = extractAttachList(message)
-  message = cleanedString
+  function extractAttachList() {
+    const regex = /```attachment\n([\s\S]*?)\n```/g
 
-  const beforeAttachList = attachments.filter(attach => attach.position === 'before')
-  const afterAttachList = attachments.filter(attach => attach.position === 'after')
+    const message = typeof prop_message === 'function' ? prop_message() : prop_message
+    const attachments = []
+    let cleanedString = message
+    let match = regex.exec(message)
 
-  console.log(beforeAttachList, afterAttachList)
+    while (match !== null) {
+      attachments.push(JSON.parse(match[1]))
+      cleanedString = cleanedString.replace(match[0], '')
+      match = regex.exec(message)
+    }
+
+    return { attachments, cleanedString }
+  }
 
   function htmlString() {
     const md = MarkdownIt({
@@ -81,42 +73,21 @@ export default ({ role, message: prop_message, showRetry, onRetry }: Props) => {
       </div>`
     }
 
-    return md.render(message)
-  }
+    const { cleanedString } = extractAttachList()
+    if (typeof prop_message === 'function')
+      return md.render(cleanedString.replaceAll('```attachment', '```'))
+    else if (typeof prop_message === 'string')
+      return md.render(cleanedString.replaceAll('```attachment', '```'))
 
-  // const roleIconClass = {
-  //   user: 'bg-gradient-to-r from-purple-400 to-yellow-400',
-  //   assistant: 'bg-gradient-to-r from-yellow-200 via-green-200 to-green-300',
-  // }
-  // const roleIcon = (<div class={`shrink-0 w-7 h-7 mt-4 rounded-full op-80 ${roleIconClass[role]}`} />)
-
-  let roleIcon = null
-  if (role === 'user') {
-    roleIcon = (
-      <div class="shrink-0 w-7 h-7 mt-4 rounded-full op-80 bg-gradient-to-r from-purple-400 to-yellow-400" />
-    )
-  }
-  if (role === 'assistant') {
-    roleIcon = (
-      <div
-        class="shrink-0 w-7 h-7 mt-4 rounded-full op-80"
-        style={{
-          'font-size': '30px',
-          'line-height': '25px',
-          'margin-right': '8px',
-        }}
-      >
-        🤖
-      </div>
-    )
+    return ''
   }
 
   return (
     <div class={role === 'user' ? 'flex-right' : 'flex-left'}>
-      <Index each={beforeAttachList}>
+      <Index each={extractAttachList().attachments.filter(attach => attach.position === 'before')}>
         {attachment => (
           <div class={role === 'user' ? 'message-user' : 'message-gpt'}>
-            <Attachment
+            <AttachmentMessageItem
               title={attachment().title}
               content={attachment().content}
               type={attachment().type}
@@ -132,13 +103,11 @@ export default ({ role, message: prop_message, showRetry, onRetry }: Props) => {
         }}
       >
         <div class="flex gap-3 rounded-lg">
-          {/* {role === 'assistant' && roleIcon} */}
           <div class="message prose break-words overflow-hidden -my-4" innerHTML={htmlString()} />
-          {/* {role === 'user' && roleIcon} */}
         </div>
 
         {showRetry?.() && onRetry && (
-        <div class="fie px-3 mb-2">
+        <div class="fie px-3 my-2">
           <div onClick={onRetry} class="gpt-retry-btn">
             <IconRefresh />
             <span>重新生成</span>
@@ -147,10 +116,10 @@ export default ({ role, message: prop_message, showRetry, onRetry }: Props) => {
         )}
 
       </div>
-      <Index each={afterAttachList}>
+      <Index each={extractAttachList().attachments.filter(attach => attach.position === 'after')}>
         {attachment => (
           <div class={role === 'user' ? 'message-user' : 'message-gpt'}>
-            <Attachment
+            <AttachmentMessageItem
               title={attachment().title}
               content={attachment().content}
               type={attachment().type}
