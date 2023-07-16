@@ -1,5 +1,5 @@
 import { Index, Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js'
-import { rand, useThrottleFn } from 'solidjs-use'
+import { useThrottleFn } from 'solidjs-use'
 import { generateSignature } from '@/utils/auth'
 import IconClear from './icons/Clear'
 import IconUpload from './icons/Upload'
@@ -18,14 +18,6 @@ export default () => {
   const [controller, setController] = createSignal<AbortController>(null)
   const [isStick, setStick] = createSignal(false)
   const [uploads, setUploads] = createSignal<Attachment[]>([])
-
-  // create 50 uploads for testing
-  setUploads(Array.from({ length: 50 }, (_, i) => ({
-    title: i.toString(),
-    content: `test${i}.png`,
-    type: 'pdf',
-    progress: rand(0, 100),
-  })))
 
   createEffect(() => (isStick() && smoothToBottom()))
 
@@ -207,29 +199,83 @@ export default () => {
     }
   }
 
+  const mapMimeTypeToAttachmentType = (mimeType: string): 'image' | 'file' | 'text' | 'pdf' => {
+    if (mimeType.startsWith('image/'))
+      return 'image'
+    else if (mimeType.startsWith('text/'))
+      return 'text'
+    else if (mimeType === 'application/pdf')
+      return 'pdf'
+    else
+      return 'file'
+  }
+
   const uploadBtnClick = async() => {
-    // Create a new file input element
-    const fileInput = document.createElement('input')
-    fileInput.type = 'file'
-    fileInput.multiple = true
+    // Create an input element dynamically
+    const input = document.createElement('input')
+    input.type = 'file'
 
-    // Listen for the change event so we can get the selected file
-    fileInput.addEventListener('change', async(event) => {
-      // Get the selected file
-      const files = Array.from(((event.target) as any).files)
-      files.forEach((file) => {
-        // Read the file (optional)
-        const reader = new FileReader()
-        reader.onload = (event) => {
-          console.log(event.target.result)
+    // Listen for changes in the input's value
+    input.onchange = async(e) => {
+      const file = (e.target as HTMLInputElement).files[0]
+
+      // Create a new attachment with an initial progress of 0
+      const newAttachment: Attachment = {
+        title: file.name,
+        content: '', // Content will be updated after the upload
+        type: mapMimeTypeToAttachmentType(file.type),
+        progress: 0,
+      }
+
+      // Add the new attachment to the uploads signal
+      setUploads(prevUploads => [...prevUploads, newAttachment])
+
+      // Create a new XMLHttpRequest
+      const xhr = new XMLHttpRequest()
+
+      // Listen for the progress event
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          // Calculate the progress as a percentage
+          const progress = Math.round((event.loaded / event.total) * 100)
+
+          // Update the progress of the current upload
+          setUploads(prevUploads =>
+            prevUploads.map(upload =>
+              upload.title === file.name ? { ...upload, progress } : upload,
+            ),
+          )
         }
-        reader.readAsDataURL(file)
+      }
 
-        setUploads([...uploads(), { title: file.name, content: '', type: file.type }])
-        console.log(uploads())
-      })
-    })
-    fileInput.click()
+      // Listen for the load event
+      xhr.onload = async() => {
+        if (xhr.status === 200) {
+          // Parse the response
+          const data = JSON.parse(xhr.response)
+
+          // Update the content of the current upload
+          setUploads(prevUploads =>
+            prevUploads.map(upload =>
+              upload.title === file.name
+                ? { ...upload, content: `/api/upload?id=${data.id}` }
+                : upload,
+            ),
+          )
+        } else {
+          // Handle the error
+          console.error('File upload failed:', xhr.statusText)
+        }
+      }
+
+      // Open and send the request
+      xhr.open('PUT', '/api/upload', true)
+      xhr.setRequestHeader('Content-Type', file.type)
+      xhr.send(file)
+    }
+
+    // Programmatically click the input element to open the file dialog
+    input.click()
   }
 
   return (

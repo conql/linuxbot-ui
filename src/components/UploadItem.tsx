@@ -1,5 +1,6 @@
 import { createEffect, createSignal } from 'solid-js'
-import IconPDF from './icons/PDF'
+import IconFileText from './icons/FileText'
+import IconFileQuestion from './icons/FileQuestion'
 
 export default ({ index, title, content, type, progress, deleteFunc }) => {
   const [icon, setIcon] = createSignal(null)
@@ -7,13 +8,14 @@ export default ({ index, title, content, type, progress, deleteFunc }) => {
   createEffect(() => {
     switch (type()) {
       case 'pdf':
-        setIcon(<IconPDF size="2em" />)
+      case 'text':
+        setIcon(<IconFileText size="2em" />)
         break
       case 'image':
         setIcon(<div><img src={content()} style={{ width: '2em', height: '2em' }} /></div>)
         break
       default:
-        setIcon(<div>unknown</div>)
+        setIcon(<IconFileQuestion size="2em" />)
     }
   })
 
@@ -33,7 +35,7 @@ export default ({ index, title, content, type, progress, deleteFunc }) => {
         height: '80px',
       }}
     >
-      <div class="relative" style={{ height: '2em' }}>
+      <div class="relative op-80" style={{ height: '2em' }}>
         {icon()}
         <div
           class="absolute top-0 left-0 bg-slate op-70"

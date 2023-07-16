@@ -10,9 +10,17 @@ export async function put({ request }: APIContext) {
   const file = await request.arrayBuffer()
   const key = uuidv4() // Generate a UUID for the file
 
-  await linuxbot.put(key, file)
-  return new Response(`File uploaded with UUID: ${key}`, {
+  await linuxbot.put(key, file, {
+    httpMetadata: {
+      contentType: request.headers.get('content-type') || 'application/octet-stream',
+    },
+  })
+
+  return new Response(JSON.stringify({ id: key }), {
     status: 200,
+    headers: {
+      'content-type': 'application/json',
+    },
   })
 }
 
@@ -21,12 +29,15 @@ export async function get({ request }: APIContext) {
   const { linuxbot } = (runtime.env as { linuxbot: R2Bucket })
 
   const url = new URL(request.url)
-  const key = url.searchParams.get('uuid') // Get the UUID from the query parameters
+  const key = url.searchParams.get('id') // Get the UUID from the query parameters
 
   if (!key) {
     return {
       status: 400,
-      body: 'No UUID provided',
+      body: JSON.stringify({ error: 'Missing id query parameter' }),
+      headers: {
+        'content-type': 'application/json',
+      },
     }
   }
 
@@ -35,15 +46,18 @@ export async function get({ request }: APIContext) {
   if (object === null) {
     return {
       status: 404,
-      body: 'File not found',
+      body: JSON.stringify({ error: 'File not found' }),
+      headers: {
+        'content-type': 'application/json',
+      },
     }
   }
 
   const headers = new Headers()
-  object.writeHttpMetadata(headers)
+  object.writeHttpMetadata(headers as any)
   headers.set('etag', object.httpEtag)
 
-  return new Response(object.body, {
+  return new Response(object.body as ReadableStream<any>, {
     headers,
   })
 }
