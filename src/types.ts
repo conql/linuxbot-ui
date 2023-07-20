@@ -11,7 +11,7 @@ export interface ErrorMessage {
 export interface Attachment {
   title: string
   content: string
-  type: 'image' | 'file' | 'text' | 'pdf'
+  type: 'image' | 'file' | 'text' | 'pdf' | 'knowledge'
   position?: 'before' | 'after'
   role?: 'system' | 'user' | 'assistant'
   progress?: number

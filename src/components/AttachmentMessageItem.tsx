@@ -1,4 +1,4 @@
-import { createSignal } from 'solid-js'
+import { Match, Switch, createSignal } from 'solid-js'
 import type { Attachment } from '@/types'
 
 export default ({ title, content, type }: Attachment) => {
@@ -32,18 +32,21 @@ export default ({ title, content, type }: Attachment) => {
       </div>
       {expand() && (
         <div class="mt-4 ml-7">
-          {type === 'image' && (
-            <img src={content} alt={title} class="mt-2" />
-          )}
-          {type === 'text' && (
-            <div class="font-medium mt-2"><span class="font-normal">{content}</span></div>
-          )}
-          {type !== 'image' && type !== 'text' && (
-            <>
-              <div class="font-medium">类型： <span class="font-normal">{type}</span></div>
-              <div class="font-medium mt-2">内容： <span class="font-normal">{content}</span></div>
-            </>
-          )}
+          <Switch
+            fallback={
+              <div>
+                <div class="font-medium">类型： <span class="font-normal">{type}</span></div>
+                <div class="font-medium mt-2">内容： <span class="font-normal">{content}</span></div>
+              </div>
+          }
+          >
+            <Match when={type === 'image'}>
+              <img src={content} alt={title} />
+            </Match>
+            <Match when={type === 'text' || type === 'knowledge'}>
+              <div class="font-medium"><span class="font-normal">{content}</span></div>
+            </Match>
+          </Switch>
         </div>
       )}
     </div>

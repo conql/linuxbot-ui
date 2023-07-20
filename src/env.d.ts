@@ -11,6 +11,8 @@ interface ImportMetaEnv {
   readonly OUTPUT: string
   readonly BAIDU_COOKIE: string
   readonly CLOUDFLARE_MOCK: boolean
+  readonly ZILLIZ_API_KEY: string
+  readonly ZILLIZ_API_BASE_URL: string
 }
 
 interface ImportMeta {

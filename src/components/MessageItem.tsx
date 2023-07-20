@@ -73,7 +73,7 @@ export default ({ role, message: prop_message, showRetry, onRetry }: Props) => {
 
   return (
     <div class={role === 'user' ? 'flex-right' : 'flex-left'}>
-      <Index each={extractAttachListInternal().attachments.filter(attach => attach.position === 'before')}>
+      <Index each={extractAttachListInternal().attachments.filter(attach => attach.position !== 'after')}>
         {attachment => (
           <div class={role === 'user' ? 'message-user' : 'message-gpt'}>
             <AttachmentMessageItem
