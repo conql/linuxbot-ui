@@ -1,13 +1,19 @@
 import { getRuntime } from '@/utils/runtime'
-import type { KVNamespace } from '@cloudflare/workers-types'
+import type { KVNamespace, R2Bucket } from '@cloudflare/workers-types'
 import type { APIContext } from 'astro'
 
 const BAIDU_COOKIE = import.meta.env.BAIDU_COOKIE
 
-async function recognize(file_url: string) {
+async function recognize(file: ArrayBuffer, contentType: string) {
   const url = 'https://aip.baidubce.com/rest/2.0/ocr/v1/accurate'
   const params = new URLSearchParams()
-  params.append('image_url', file_url)
+  const file_data = btoa(new Uint8Array(file).reduce(
+    (data, byte) => {
+      return data + String.fromCharCode(byte)
+    },
+    '',
+  ))
+  params.append('image', `data:${contentType};base64,${file_data}`)
   params.append('type', url)
 
   const headers = {
@@ -27,20 +33,23 @@ async function recognize(file_url: string) {
     try {
       json_response = await response.json().then(r => r.data)
     } catch {
-      throw new Error(`Response is not JSON. Possibly the url ${file_url} is invalid.`)
+      throw new Error('Response is not JSON.')
     }
+
     const words_result = json_response.words_result // array of {words: "xxx"}
-    if (!words_result) throw new Error(`No words result. Response: ${JSON.stringify(json_response)}`)
+    if (!words_result)
+      throw new Error(`No words result. Response: ${JSON.stringify(json_response)}`)
+
     const result_text = words_result.map((item: any) => item.words).join(' ')
     return result_text
   } else {
-    throw new Error(`HTTP error! status: ${response.status}`)
+    throw new Error(`HTTP error. Status: ${response.status}`)
   }
 }
 
 export async function get({ request }: APIContext) {
   const runtime = getRuntime(request)
-  const { 'linuxbot-kv': kvdb } = (runtime.env as { 'linuxbot-kv': KVNamespace })
+  const { 'linuxbot-kv': kvdb, 'linuxbot-r2': r2db } = (runtime.env as { 'linuxbot-kv': KVNamespace, 'linuxbot-r2': R2Bucket })
 
   const url = new URL(request.url)
   const key = url.searchParams.get('id')
@@ -57,12 +66,20 @@ export async function get({ request }: APIContext) {
 
   let object = await kvdb.get(key)
   if (!object) {
-    const host = request.headers.get('host')
-    // const host = 'linuxbot-ui.pages.dev'
-    const protocol = request.headers.get('x-forwarded-proto') || 'https'
-    const url = `${protocol}://${host}/api/upload/${key}`
+    const file_data = await r2db.get(key)
+
+    if (!file_data) {
+      return {
+        status: 404,
+        body: JSON.stringify({ error: 'File not found' }),
+        headers: {
+          'content-type': 'application/json',
+        },
+      }
+    }
+
     try {
-      object = await recognize(url)
+      object = await recognize(await file_data.arrayBuffer(), file_data.httpMetadata.contentType)
     } catch (e) {
       return new Response(e.message, { status: 400 })
     }

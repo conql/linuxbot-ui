@@ -107,24 +107,21 @@ export class R2Object implements R2ObjectBody {
   }
 
   async arrayBuffer(): Promise<ArrayBuffer> {
-    const encoder = new TextEncoder()
-    return encoder.encode(JSON.stringify(this._body)).buffer
+    return this._body
   }
 
   async text(): Promise<string> {
-    this._bodyUsed = true
-    return JSON.stringify(this._body)
+    const decoder = new TextDecoder()
+    return decoder.decode(this._body)
   }
 
   async json<T>(): Promise<T> {
-    this._bodyUsed = true
-    return this._body as T
+    const text = await this.text()
+    return JSON.parse(text)
   }
 
   async blob(): Promise<Blob> {
-    const encoder = new TextEncoder()
-    const data = encoder.encode(JSON.stringify(this._body))
-    return new Blob([data])
+    return new Blob([this._body])
   }
 
   async writeHttpMetadata() {
