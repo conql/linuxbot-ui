@@ -1,5 +1,6 @@
 // #vercel-end
-import { inference } from '@/utils/langchain'
+import { getRuntime } from '@/utils/runtime'
+import Langchain from '@/utils/langchain'
 import type { APIRoute } from 'astro'
 
 export const post: APIRoute = async(context) => {
@@ -12,5 +13,7 @@ export const post: APIRoute = async(context) => {
       },
     }), { status: 400 })
   }
-  return inference(messages)
+
+  const langchain = new Langchain(messages, getRuntime(context.request))
+  return langchain.inference()
 }

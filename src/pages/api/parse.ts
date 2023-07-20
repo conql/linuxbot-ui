@@ -29,14 +29,14 @@ async function recognize(file: ArrayBuffer, contentType: string) {
   })
 
   if (response.status === 200) {
-    let json_response = { words_result: [] }
+    let json_response = { data: { words_result: [] } }
     try {
-      json_response = await response.json().then(r => r.data)
+      json_response = await response.json()
     } catch {
       throw new Error('Response is not JSON.')
     }
 
-    const words_result = json_response.words_result // array of {words: "xxx"}
+    const words_result = json_response.data.words_result // array of {words: "xxx"}
     if (!words_result)
       throw new Error(`No words result. Response: ${JSON.stringify(json_response)}`)
 
@@ -47,43 +47,69 @@ async function recognize(file: ArrayBuffer, contentType: string) {
   }
 }
 
-export async function get({ request }: APIContext) {
-  const runtime = getRuntime(request)
+export async function parseLink(link: string, runtime: any) {
   const { 'linuxbot-kv': kvdb, 'linuxbot-r2': r2db } = (runtime.env as { 'linuxbot-kv': KVNamespace, 'linuxbot-r2': R2Bucket })
+  let parsed = await kvdb.get(link)
 
+  if (!parsed) {
+    let file_data: ArrayBuffer
+    let content_type: string
+
+    if (!link.startsWith('/api/upload/')) {
+      const file_resp = await fetch(link).catch(null)
+      if (!file_resp)
+        throw new Error(`Failed to fetch ${link}`)
+
+      file_data = await file_resp.arrayBuffer()
+      content_type = file_resp.headers.get('content-type') || 'image/png'
+    } else {
+      const key = link.replace('/api/upload/', '')
+      const object = await r2db.get(key)
+      if (!object)
+        throw new Error(`Failed to fetch ${link}. Object not found.`)
+
+      file_data = await object.arrayBuffer()
+      content_type = object.httpMetadata.contentType || 'image/png'
+    }
+
+    try {
+      parsed = await recognize(file_data, content_type)
+    } catch (e) {
+      throw new Error(`Failed to parse ${link}: ${e.message}`)
+    }
+    await kvdb.put(link, parsed)
+  }
+
+  return parsed
+}
+
+export async function get({ request }: APIContext) {
   const url = new URL(request.url)
-  const key = url.searchParams.get('id')
+  const link = url.searchParams.get('link')
 
-  if (!key) {
+  if (!link) {
     return {
       status: 400,
-      body: JSON.stringify({ error: 'Missing id query parameter' }),
+      body: JSON.stringify({ error: 'Missing parameter "link"' }),
       headers: {
         'content-type': 'application/json',
       },
     }
   }
 
-  let object = await kvdb.get(key)
-  if (!object) {
-    const file_data = await r2db.get(key)
-
-    if (!file_data) {
-      return {
-        status: 404,
-        body: JSON.stringify({ error: 'File not found' }),
-        headers: {
-          'content-type': 'application/json',
+  const runtime = getRuntime(request)
+  let parsed = null
+  try {
+    parsed = await parseLink(link, runtime)
+  } catch (e) {
+    return new Response(
+      JSON.stringify({
+        error: {
+          message: e.message,
         },
-      }
-    }
-
-    try {
-      object = await recognize(await file_data.arrayBuffer(), file_data.httpMetadata.contentType)
-    } catch (e) {
-      return new Response(e.message, { status: 400 })
-    }
-    await kvdb.put(key, object)
+      }),
+      { status: 500 })
   }
-  return new Response(object)
+
+  return new Response(parsed)
 }
