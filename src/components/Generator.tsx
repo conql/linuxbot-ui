@@ -1,6 +1,5 @@
 import { Index, Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js'
 import { useThrottleFn } from 'solidjs-use'
-import { generateSignature } from '@/utils/auth'
 import IconClear from './icons/Clear'
 import IconUpload from './icons/Upload'
 import MessageItem from './MessageItem'
@@ -56,20 +55,33 @@ export default () => {
   }
 
   const sendBtnClick = async() => {
-    const inputValue = inputRef.value
-    if (!inputValue)
+    let content = inputRef.value
+    if (!content)
       return
 
     inputRef.value = ''
+
+    // Append a markdown code block for each attachment
+    uploads().forEach((upload) => {
+      const attachmentContent = JSON.stringify({
+        ...upload,
+        position: 'after',
+      })
+      content += `\n\n\`\`\`attachment\n${attachmentContent}\n\`\`\``
+    })
+
     setMessageList([
       ...messageList(),
       {
         role: 'user',
-        content: inputValue,
+        content,
       },
     ])
     requestWithLatestMessage()
     instantToBottom()
+
+    // Clear the uploads after sending the message
+    setUploads([])
   }
 
   const smoothToBottom = useThrottleFn(() => {
@@ -84,7 +96,6 @@ export default () => {
     setLoading(true)
     setCurrentAssistantMessage('')
     setCurrentError(null)
-    const storagePassword = localStorage.getItem('pass')
     try {
       const controller = new AbortController()
       setController(controller)
@@ -95,17 +106,10 @@ export default () => {
           content: currentSystemRoleSettings(),
         })
       }
-      const timestamp = Date.now()
       const response = await fetch('/api/generate', {
         method: 'POST',
         body: JSON.stringify({
           messages: requestMessageList,
-          time: timestamp,
-          pass: storagePassword,
-          sign: await generateSignature({
-            t: timestamp,
-            m: requestMessageList?.[requestMessageList.length - 1]?.content || '',
-          }),
         }),
         signal: controller.signal,
       })
@@ -254,11 +258,13 @@ export default () => {
           // Parse the response
           const data = JSON.parse(xhr.response)
 
+          console.log('File upload succeeded:', data)
+
           // Update the content of the current upload
           setUploads(prevUploads =>
             prevUploads.map(upload =>
               upload.title === file.name
-                ? { ...upload, content: `/api/upload?id=${data.id}` }
+                ? { ...upload, content: `/api/upload/${data.id}` }
                 : upload,
             ),
           )

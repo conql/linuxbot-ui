@@ -3,6 +3,7 @@ import MarkdownIt from 'markdown-it'
 import mdKatex from 'markdown-it-katex'
 import mdHighlight from 'markdown-it-highlightjs'
 import { useClipboard, useEventListener } from 'solidjs-use'
+import { extractAttachList } from '@/utils/langchain'
 import IconRefresh from './icons/Refresh'
 import AttachmentMessageItem from './AttachmentMessageItem'
 import type { Accessor } from 'solid-js'
@@ -34,21 +35,9 @@ export default ({ role, message: prop_message, showRetry, onRetry }: Props) => {
     }
   })
 
-  function extractAttachList() {
-    const regex = /```attachment\n([\s\S]*?)\n```/g
-
+  function extractAttachListInternal() {
     const message = typeof prop_message === 'function' ? prop_message() : prop_message
-    const attachments = []
-    let cleanedString = message
-    let match = regex.exec(message)
-
-    while (match !== null) {
-      attachments.push(JSON.parse(match[1]))
-      cleanedString = cleanedString.replace(match[0], '')
-      match = regex.exec(message)
-    }
-
-    return { attachments, cleanedString }
+    return extractAttachList(message)
   }
 
   function htmlString() {
@@ -73,7 +62,7 @@ export default ({ role, message: prop_message, showRetry, onRetry }: Props) => {
       </div>`
     }
 
-    const { cleanedString } = extractAttachList()
+    const { cleanedString } = extractAttachListInternal()
     if (typeof prop_message === 'function')
       return md.render(cleanedString.replaceAll('```attachment', '```'))
     else if (typeof prop_message === 'string')
@@ -84,7 +73,7 @@ export default ({ role, message: prop_message, showRetry, onRetry }: Props) => {
 
   return (
     <div class={role === 'user' ? 'flex-right' : 'flex-left'}>
-      <Index each={extractAttachList().attachments.filter(attach => attach.position === 'before')}>
+      <Index each={extractAttachListInternal().attachments.filter(attach => attach.position === 'before')}>
         {attachment => (
           <div class={role === 'user' ? 'message-user' : 'message-gpt'}>
             <AttachmentMessageItem
@@ -116,7 +105,7 @@ export default ({ role, message: prop_message, showRetry, onRetry }: Props) => {
         )}
 
       </div>
-      <Index each={extractAttachList().attachments.filter(attach => attach.position === 'after')}>
+      <Index each={extractAttachListInternal().attachments.filter(attach => attach.position === 'after')}>
         {attachment => (
           <div class={role === 'user' ? 'message-user' : 'message-gpt'}>
             <AttachmentMessageItem

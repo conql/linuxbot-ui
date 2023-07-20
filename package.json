@@ -10,7 +10,7 @@
     "build:netlify": "OUTPUT=netlify astro build",
     "build:cloudflare": "OUTPUT=cloudflare astro build",
     "preview": "astro preview",
-    "preview:cloudflare": "wrangler pages dev ./dist",
+    "preview:cloudflare": "wrangler pages dev ./dist --r2=linuxbot-r2 --kv=linuxbot-kv",
     "astro": "astro",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx,.astro",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx,.astro --fix"

@@ -38,7 +38,7 @@ export default ({ index, title, content, type, progress, deleteFunc }) => {
       <div class="relative op-80" style={{ height: '2em' }}>
         {icon()}
         <div
-          class="absolute top-0 left-0 bg-slate op-70"
+          class="absolute bottom-0 left-0 bg-slate op-70"
           style={{
             width: '100%',
             height: `${

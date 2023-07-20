@@ -8,6 +8,9 @@ interface ImportMetaEnv {
   readonly PUBLIC_SECRET_KEY: string
   readonly SITE_PASSWORD: string
   readonly OPENAI_API_MODEL: string
+  readonly OUTPUT: string
+  readonly BAIDU_COOKIE: string
+  readonly CLOUDFLARE_MOCK: boolean
 }
 
 interface ImportMeta {

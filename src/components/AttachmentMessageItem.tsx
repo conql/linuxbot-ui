@@ -32,8 +32,18 @@ export default ({ title, content, type }: Attachment) => {
       </div>
       {expand() && (
         <div class="mt-4 ml-7">
-          <div class="font-medium">Type: <span class="font-normal">{type}</span></div>
-          <div class="font-medium mt-2">Content: <span class="font-normal">{content}</span></div>
+          {type === 'image' && (
+            <img src={content} alt={title} class="mt-2" />
+          )}
+          {type === 'text' && (
+            <div class="font-medium mt-2"><span class="font-normal">{content}</span></div>
+          )}
+          {type !== 'image' && type !== 'text' && (
+            <>
+              <div class="font-medium">类型： <span class="font-normal">{type}</span></div>
+              <div class="font-medium mt-2">内容： <span class="font-normal">{content}</span></div>
+            </>
+          )}
         </div>
       )}
     </div>

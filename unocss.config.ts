@@ -54,7 +54,7 @@ export default defineConfig({
     'stick-btn-on': '!bg-$c-fg text-$c-bg hover:op-80',
     'message-div': 'p-4 my-2 transition-colors',
     'message-gpt': 'message-div bg-(slate op-15) rounded-lg',
-    'message-user': 'message-div bg-(green op-10) rounded-lg',
+    'message-user': 'message-div bg-(sky op-15) rounded-lg',
     'flex-right': 'flex flex-col items-end',
     'flex-left': 'flex flex-col items-start',
   }],
