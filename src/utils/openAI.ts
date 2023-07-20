@@ -4,7 +4,7 @@ import type { ChatMessage } from '@/types'
 
 export const model = import.meta.env.OPENAI_API_MODEL || 'gpt-3.5-turbo'
 const apiKey = import.meta.env.OPENAI_API_KEY
-const baseUrl = ((import.meta.env.OPENAI_API_BASE_URL) ?? '').trim().replace(/\/$/, '')
+const baseUrl = ((import.meta.env.OPENAI_API_BASE_URL) ?? 'ERROR').trim().replace(/\/$/, '')
 
 export const fetchOpenAIResponse = async(messages: ChatMessage[], controller: ReadableStreamDefaultController<any>) => {
   const payload = {
