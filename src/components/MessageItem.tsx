@@ -3,11 +3,10 @@ import MarkdownIt from 'markdown-it'
 import mdKatex from 'markdown-it-katex'
 import mdHighlight from 'markdown-it-highlightjs'
 import { useClipboard, useEventListener } from 'solidjs-use'
-import { extractAttachList } from '@/utils/langchain'
 import IconRefresh from './icons/Refresh'
 import AttachmentMessageItem from './AttachmentMessageItem'
 import type { Accessor } from 'solid-js'
-import type { ChatMessage } from '@/types'
+import type { Attachment, ChatMessage } from '@/types'
 
 interface Props {
   role: ChatMessage['role']
@@ -38,6 +37,28 @@ export default ({ role, message: prop_message, showRetry, onRetry }: Props) => {
   function extractAttachListInternal() {
     const message = typeof prop_message === 'function' ? prop_message() : prop_message
     return extractAttachList(message)
+  }
+
+  const extractAttachList = (message: string): { attachments: Array<Attachment>, cleanedString: string } => {
+    const regex = /```attachment\n([\s\S]*?)\n```/g
+
+    const attachments = []
+    let cleanedString = message
+    let match = regex.exec(message)
+
+    while (match !== null) {
+      let attach: Attachment
+      try {
+        attach = JSON.parse(match[1])
+      } catch (e) {
+        attach = { type: 'text', title: 'error', content: `Malformed attachment${match[1]}` }
+      }
+      attachments.push(attach)
+      cleanedString = cleanedString.replace(match[0], '')
+      match = regex.exec(message)
+    }
+
+    return { attachments, cleanedString }
   }
 
   function htmlString() {
@@ -96,12 +117,12 @@ export default ({ role, message: prop_message, showRetry, onRetry }: Props) => {
         </div>
 
         {showRetry?.() && onRetry && (
-        <div class="fie px-3 my-2">
-          <div onClick={onRetry} class="gpt-retry-btn">
-            <IconRefresh />
-            <span>重新生成</span>
+          <div class="fie px-3 my-2">
+            <div onClick={onRetry} class="gpt-retry-btn">
+              <IconRefresh />
+              <span>重新生成</span>
+            </div>
           </div>
-        </div>
         )}
 
       </div>

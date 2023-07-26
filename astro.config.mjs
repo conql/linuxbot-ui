@@ -56,7 +56,7 @@ export default defineConfig({
       enabled: true,
     },
   })],
-  output: 'server',
+  output: 'static',
   adapter: envAdapter(),
   vite: {
     plugins: [process.env.OUTPUT === 'vercel' && disableBlocks(), process.env.OUTPUT === 'netlify' && disableBlocks()],
